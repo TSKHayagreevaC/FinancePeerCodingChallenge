@@ -1,19 +1,33 @@
 const express = require("express");
-const cors = require("cors");
+const path = require("path");
+const bcrypt = require("bcrypt");
+const jwtToken = require("jsonwebtoken");
+
+const { open } = require("sqlite");
+const sqlite3 = require("sqlite3");
+
+const dbPath = path.join(__dirname, "entriesData.db");
+
 const app = express();
+app.use(express.json());
 
-const data = require("./data.json");
+let db = null;
 
-app.use(cors());
+const data = require("./data");
 
-app.get("/", (req, res) => {
-  res.send("hello world all...");
-});
+const initializeDbAndServer = async () => {
+  try {
+    db = await open({
+      filename: dbPath,
+      driver: sqlite3.Database,
+    });
+    app.listen(3001, () => {
+      console.log("server is running at https://localhost:3001/");
+    });
+  } catch (e) {
+    console.log(`DB Error: ${e.message}`);
+    process.exit(1);
+  }
+};
 
-app.get("/entriesData", (req, res) => {
-  res.send({ entriesData: JSON.stringify(data) });
-});
-
-app.listen(3001, () => {
-  console.log("running on port 3001");
-});
+initializeDbAndServer();
