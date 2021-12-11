@@ -1,4 +1,6 @@
 const express = require("express");
+const http = require("http");
+const upload = require("express-fileupload");
 const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
@@ -12,6 +14,7 @@ const dbPath = path.join(__dirname, "entriesData.db");
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(upload());
 
 let db = null;
 
@@ -33,6 +36,20 @@ const initializeDbAndServer = async () => {
 };
 
 initializeDbAndServer();
+
+authenticateToken = (req, res, next) => {
+  let jwtToken;
+  const authHeader = req.headers["authorization"];
+  if (authHeader !== undefined) {
+    jwtToken = authHeader.split(" ")[1];
+  }
+  if (authHeader === undefined) {
+    res.status(401);
+    res.json({ message: "authorization failure" });
+  } else {
+    next();
+  }
+};
 
 app.post("/register/", async (req, res) => {
   const { username, password } = req.body;
@@ -75,5 +92,21 @@ app.post("/login/", async (req, res) => {
       res.status(400);
       res.json({ message: "Incorrect Password..." });
     }
+  }
+});
+
+app.post("/uploadFile/", authenticateToken, async (req, res) => {
+  const data = req.body;
+  if (data.length === undefined) {
+    res.status(400).json({ msg: "invalid file" });
+  } else {
+    data.map(async (eachItem) => {
+      console.log(eachItem.title);
+      const addDataQuery = `INSERT INTO entries_data(id, userId, title, body) VALUES('${eachItem.id}', '${eachItem.userId}', '${eachItem.title}', '${eachItem.body}')`;
+      await db.run(addDataQuery);
+    });
+    res
+      .status(200)
+      .json({ msg: "data of the file is uploaded into database..." });
   }
 });
